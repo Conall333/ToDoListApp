@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="center_vertical">
+
+    <Button
+        android:id="@+id/task_check"
+        android:layout_width="76dp"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/task_title"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="1dp"
+        android:layout_marginEnd="81dp"
+        android:layout_marginRight="81dp"
+        android:background="@drawable/buttonshape"
+        android:onClick="checkTask"
+        android:padding="5dp"
+        android:text="Check"
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:id="@+id/task_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_marginTop="11dp"
+        android:onClick="viewMore"
+        android:padding="5dp"
+        android:text="Hello"
+        android:textColor="@android:color/black"
+        android:textSize="28sp" />
+
+    <Button
+        android:id="@+id/task_delete"
+        android:layout_width="72dp"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/task_title"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginEnd="4dp"
+        android:layout_marginRight="4dp"
+        android:background="@drawable/buttonshape"
+        android:onClick="deleteTask"
+        android:padding="5dp"
+        android:text="Delete"
+        android:textColor="@android:color/black" />
+
+</RelativeLayout>
