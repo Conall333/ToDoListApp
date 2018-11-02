@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
         session = new SharedPrefs(getApplicationContext());
 
         if (session.isLoggedIn()){
+            
 
             try {
                 session.backgroundLoginCheck();
