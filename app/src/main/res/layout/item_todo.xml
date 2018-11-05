@@ -30,7 +30,7 @@
         android:layout_marginStart="0dp"
         android:layout_marginLeft="0dp"
         android:layout_marginTop="11dp"
-        android:onClick="viewMore"
+        android:onClick="getTaskInfo"
         android:padding="5dp"
         android:text="Hello"
         android:textColor="@android:color/black"

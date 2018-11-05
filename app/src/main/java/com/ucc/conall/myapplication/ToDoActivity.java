@@ -1,12 +1,9 @@
 package com.ucc.conall.myapplication;
 
 import android.app.AlertDialog;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -21,19 +18,28 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 
-// import static com.ucc.conall.myapplication.MainActivity.Email;
-// import static com.ucc.conall.myapplication.MainActivity.Name;
-// import static com.ucc.conall.myapplication.MainActivity.mypreference;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
 
 public class ToDoActivity extends AppCompatActivity {
 
-    private TaskDbHelper mHelper;
     private ListView mTaskListView;
     private ArrayAdapter<String> mAdapter;
+    ArrayList<String> taskList = new ArrayList<>();
+    ArrayList<String> infoList = new ArrayList<>();
+    public String endpoint = "http://todo.eu-west-1.elasticbeanstalk.com/TaskListHandler";
+    // "http://todo.eu-west-1.elasticbeanstalk.com/TaskListHandler";
+    // http://10.0.2.2:8080//X/TaskListHandler
 
-    // SharedPreferences sharedpreferences;
 
     SharedPrefs session;
 
@@ -43,15 +49,16 @@ public class ToDoActivity extends AppCompatActivity {
         setContentView(R.layout.activity_to_do);
 
         mTaskListView = findViewById(R.id.todo_list);
-        mHelper = new TaskDbHelper(this);
-        UpdateTasks();
-
-        Context context = getApplicationContext();
-
 
         session = new SharedPrefs(getApplicationContext());
+        // checks if user login is still valid
         session.checkLoginStatus();
 
+        // initial list data fetch from server
+        updateData();
+
+
+        // shows login successful if user came from login screen
 
         try {
             Intent intent = getIntent();
@@ -66,30 +73,12 @@ public class ToDoActivity extends AppCompatActivity {
 
         }
 
-
-
-
-
-
-
-
-
-
-
     }
 
 
+    private void updateTaskViews() {
 
-    private void UpdateTasks() {
-        ArrayList<String> taskList = new ArrayList<>();
-        SQLiteDatabase db = mHelper.getReadableDatabase();
-        Cursor cursor = db.query(TaskContract.TaskEntry.TABLE,
-                new String[]{TaskContract.TaskEntry._ID, TaskContract.TaskEntry.COL_TASK_TITLE},
-                null, null, null, null, null);
-        while (cursor.moveToNext()) {
-            int idx = cursor.getColumnIndex(TaskContract.TaskEntry.COL_TASK_TITLE);
-            taskList.add(cursor.getString(idx));
-        }
+        Log.d("X20d", taskList.toString());
 
         if (mAdapter == null) {
             mAdapter = new ArrayAdapter<>(this,
@@ -99,41 +88,40 @@ public class ToDoActivity extends AppCompatActivity {
             mTaskListView.setAdapter(mAdapter);
         } else {
             mAdapter.clear();
+            Log.d("X10",taskList.toString());
+
             mAdapter.addAll(taskList);
             mAdapter.notifyDataSetChanged();
         }
 
-        cursor.close();
-        db.close();
     }
 
     public void deleteTask(View view) {
         View parent = (View) view.getParent();
         TextView taskTextView = parent.findViewById(R.id.task_title);
         String task = String.valueOf(taskTextView.getText());
-        SQLiteDatabase db = mHelper.getWritableDatabase();
-        db.delete(TaskContract.TaskEntry.TABLE,
-                TaskContract.TaskEntry.COL_TASK_TITLE + " = ?",
-                new String[]{task});
-        db.close();
-        UpdateTasks();
-        Log.d("X25", "test");
+
+        // deletetask of string "task" from database
+        sendDeletions(task,"delete");
+
+        // Log.d("X25", "test");
     }
 
     public void checkTask(View view) {
         View parent = (View) view.getParent();
         TextView taskTextView = parent.findViewById(R.id.task_title);
+        String task = String.valueOf(taskTextView.getText());
 
         if(!taskTextView.getPaint().isStrikeThruText()) {
-
             taskTextView.setPaintFlags(taskTextView.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            checkTaskOnDB(task, "check");
         }
         else {
 
             taskTextView.setPaintFlags(taskTextView.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            checkTaskOnDB(task, "uncheck");
         }
 
-        UpdateTasks();
         Log.d("X25", "test");
     }
 
@@ -142,43 +130,14 @@ public class ToDoActivity extends AppCompatActivity {
 
 
     public void deleteAll(View view) {
-        SQLiteDatabase db = mHelper.getWritableDatabase();
-        db.execSQL("delete from "+ TaskContract.TaskEntry.TABLE);
-        db.close();
-        UpdateTasks();
+
+        sendDeletions("task", "deleteAll");
+
     }
 
-    public void viewMore(View v) {
-        TextView taskTextView = v.findViewById(R.id.task_title);
-        String task = String.valueOf(taskTextView.getText());
-        SQLiteDatabase db = mHelper.getWritableDatabase();
+    public void viewMore(String qtitle, String qinfo, String qdate) {
 
-        String query= "SELECT * FROM tasks where title = '"+task+"'";
-        Cursor cursor1= db.rawQuery(query, null);
-
-        ArrayList<String> stringArrayList = new ArrayList<String>();
-
-        while (cursor1.moveToNext()) {
-
-            for (int i=1; i<cursor1.getColumnCount(); i++) {
-                stringArrayList.add(cursor1.getString(i));
-            }
-        }
-
-        // Log.d("X25", stringArrayList.toString());
-        String qtitle = stringArrayList.subList(0,1).toString().replace("[", "").replace("]", "");
-        String qinfo = stringArrayList.subList(1,2).toString().replace("[", "").replace("]", "");
-        String qdate = stringArrayList.subList(2,3).toString().replace("[", "").replace("]", "");
-        ;
-
-       // Log.d("X25", qtitle);
-       // Log.d("X25", qinfo);
-       // Log.d("X25", qdate);
-
-        cursor1.close();
-        db.close();
-
-
+        // extension of the getTaskInfo function, shows the info in a alert dialog
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = this.getLayoutInflater();
@@ -198,9 +157,6 @@ public class ToDoActivity extends AppCompatActivity {
         builder.create();
         builder.show();
 
-        db.close();
-
-
     }
 
 
@@ -214,30 +170,6 @@ public class ToDoActivity extends AppCompatActivity {
 
 
     }
-
-
-   /*
-    public void Logout() {
-
-        sharedpreferences = getSharedPreferences(mypreference,
-                Context.MODE_PRIVATE);
-
-            String n = "";
-            String e = "";
-            SharedPreferences.Editor editor = sharedpreferences.edit();
-            editor.putString(Name, n);
-            editor.putString(Email, e);
-            editor.apply();
-
-            startActivity(new Intent(ToDoActivity.this, MainActivity.class));
-
-        }
-
-        */
-
-
-
-
 
 
 
@@ -265,20 +197,8 @@ public class ToDoActivity extends AppCompatActivity {
                                 String info = infoEditText.getText().toString();
                                 String date = dateEditText.getText().toString();
 
-                                Log.d("x26", info);
-                                Log.d("x26", date);
+                                insertTask(task,info,date);
 
-                                SQLiteDatabase db = mHelper.getWritableDatabase();
-                                ContentValues values = new ContentValues();
-                                values.put(TaskContract.TaskEntry.COL_TASK_TITLE, task);
-                                values.put(TaskContract.TaskEntry.COL_TASK_INFO, info);
-                                values.put(TaskContract.TaskEntry.COL_TASK_DATE, date);
-                                db.insertWithOnConflict(TaskContract.TaskEntry.TABLE,
-                                        null,
-                                        values,
-                                        SQLiteDatabase.CONFLICT_REPLACE);
-                                UpdateTasks();
-                                db.close();
                             }
                         })
                         .setNegativeButton("Cancel", null)
@@ -294,6 +214,304 @@ public class ToDoActivity extends AppCompatActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
+
+
+
+
+
+    public void updateData() {
+        try {
+
+            JSONObject d = new JSONObject();
+            String action = "update";
+
+            HashMap<String, String> user = session.getUserDetails();
+            String uname = user.get("name");
+
+            d.put("action",action);
+            d.put("username",uname);
+
+            Log.d("X20", d.toString());
+
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(endpoint, d, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+
+                    Context context = getApplicationContext();
+
+                    try {
+
+                        JSONObject json_data = response.getJSONObject("values");
+                        JSONArray jsonArray = json_data.getJSONArray("titles");
+
+                        ArrayList<String> list = new ArrayList<String>();
+                        if (jsonArray != null) {
+                            int len = jsonArray.length();
+                            for (int i=0;i<len;i++){
+                                list.add(jsonArray.get(i).toString());
+                            }
+                        }
+
+                        taskList = list;
+
+                        Log.d("X20c", taskList.toString());
+
+                        updateTaskViews();
+                    }
+                    catch (JSONException e) {
+                        Log.d("X20g", "error: " + e);
+                    }
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("X20f",error.toString());
+                }
+            });
+
+            VolleySingleton.getInstance(this).addToRequestQueue(jsonRequest);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+    public void updatedResponse(JSONObject response) {
+
+        Log.d("X27","update response");
+        Log.d("X27-",response.toString());
+
+        try {
+            JSONObject json_data = response.getJSONObject("values");
+            JSONArray jsonArray = json_data.getJSONArray("titles");
+
+
+            ArrayList<String> list = new ArrayList<String>();
+            if (jsonArray != null) {
+                int len = jsonArray.length();
+                for (int i=0;i<len;i++){
+                    list.add(jsonArray.get(i).toString());
+                }
+            }
+
+
+            taskList = list;
+
+            Log.d("X27c", taskList.toString());
+
+            updateTaskViews();
+
+        }
+        catch(JSONException e){
+            Log.d("X27:",e.toString());
+
+        }
+
+
+
+    }
+
+
+
+    public void sendDeletions(String title, String action) {
+        try {
+
+            JSONObject d = new JSONObject();
+
+            HashMap<String, String> user = session.getUserDetails();
+            String uname = user.get("name");
+
+            Log.d("X21", action);
+
+            d.put("action",action);
+            d.put("username",uname);
+            d.put("title", title );
+
+            Log.d("X21", d.toString());
+
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(endpoint, d, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+
+                    try {
+
+                        Log.d("X27", response.toString());
+                        updatedResponse(response);
+                    }
+                    catch(Exception e) {}
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("X20f",error.toString());
+                }
+            });
+
+            VolleySingleton.getInstance(this).addToRequestQueue(jsonRequest);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+
+    public void insertTask(String title,String info,String date) {
+        try {
+
+            JSONObject d = new JSONObject();
+            String action = "insert";
+
+            HashMap<String, String> user = session.getUserDetails();
+            String uname = user.get("name");
+
+            d.put("action",action);
+            d.put("username",uname);
+            d.put("title", title );
+            d.put("info", info );
+            d.put("date", date );
+
+
+            Log.d("X20", d.toString());
+
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(endpoint, d, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+
+                    updatedResponse(response);
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("X20f",error.toString());
+                }
+            });
+
+            VolleySingleton.getInstance(this).addToRequestQueue(jsonRequest);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+    public void checkTaskOnDB(String task,String action) {
+        try {
+
+            JSONObject d = new JSONObject();
+
+            HashMap<String, String> user = session.getUserDetails();
+            String uname = user.get("name");
+
+            d.put("action",action);
+            d.put("username",uname);
+            d.put("title", task );
+
+            Log.d("X20", d.toString());
+
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(endpoint, d, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+
+                    updatedResponse(response);
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("X20f",error.toString());
+                }
+            });
+
+            VolleySingleton.getInstance(this).addToRequestQueue(jsonRequest);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+    public void getTaskInfo(View v) {
+
+        try {
+
+
+            final TextView taskTextView = v.findViewById(R.id.task_title);
+            String task = String.valueOf(taskTextView.getText());
+
+
+            JSONObject d = new JSONObject();
+            String action = "query";
+
+            HashMap<String, String> user = session.getUserDetails();
+            String uname = user.get("name");
+
+            d.put("action",action);
+            d.put("username",uname);
+            d.put("title", task );
+
+            Log.d("X20t", task);
+
+            JsonObjectRequest jsonRequest = new JsonObjectRequest(endpoint, d, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+
+                    Context context = getApplicationContext();
+
+                    try {
+                        JSONObject json_data = response.getJSONObject("values");
+
+                        Log.d("X20y", json_data.toString());
+                        JSONArray jsonArray = json_data.getJSONArray("taskInfo");
+
+                        ArrayList<String> list = new ArrayList<String>();
+                        if (jsonArray != null) {
+                            int len = jsonArray.length();
+                            for (int i=0;i<len;i++){
+                                list.add(jsonArray.get(i).toString());
+                            }
+                        }
+
+                        infoList = list;
+
+                        String qtitle = infoList.get(0);
+                        String qinfo = infoList.get(1);
+                        String qdate = infoList.get(2);
+
+                        viewMore(qtitle,qinfo,qdate);
+
+                    }
+                    catch (JSONException e) {
+                        Log.d("X20g", "error: " + e);
+                    }
+
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("X20f",error.toString());
+                }
+            });
+
+            VolleySingleton.getInstance(this).addToRequestQueue(jsonRequest);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
     }
 
 
@@ -301,6 +519,27 @@ public class ToDoActivity extends AppCompatActivity {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
 
 
 

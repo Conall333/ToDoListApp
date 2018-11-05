@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item
-        android:id="@+id/action_add_task"
-        android:icon="@android:drawable/ic_menu_add"
-        android:title="Add Task"
-        app:showAsAction="always" />
-    <item
-        android:id="@+id/log_out"
-        android:icon="@android:drawable/ic_menu_add"
-        android:title="Add Task"
-        app:showAsAction="always" />
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/action_add_task"
+        android:title="Add Task" />
+    <item android:id="@+id/log_out"
+        android:title="Log Out" />
+
 </menu>
+
+
